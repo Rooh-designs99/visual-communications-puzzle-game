@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Target Clicker Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: #1a1a2e;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        h1 { margin-bottom: 15px; font-size: 2em; text-align: center; }
+        #gameCanvas {
+            border: 3px solid #e94560;
+            border-radius: 8px;
+            background: #0f0f23;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .score { margin-top: 15px; font-size: 1.5em; color: #e94560; font-weight: bold; }
+        .instructions { margin-top: 10px; color: #aaa; font-size: 0.9em; text-align: center; padding: 0 20px; }
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        .game-over h2 { color: #e94560; margin-bottom: 15px; }
+        .game-over button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .game-over button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <h1>🎯 Target Clicker</h1>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <div class="score">Score: <span id="score">0</span> | Time: <span id="time">30</span>s</div>
+    <div class="instructions">Tap or click the red circles! Speed counts!</div>
+
+    <div class="game-over" id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button onclick="restartGame()">Play Again</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const gameOverEl = document.getElementById('gameOver');
+        const finalScoreEl = document.getElementById('finalScore');
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = true;
+        let target = { x: 300, y: 200, size: 30 };
+        let timerInterval;
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0f0f23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#e94560';
+            ctx.shadowColor = '#e94560';
+            ctx.shadowBlur = 25;
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Ring effect
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(target.x, target.y, target.size + 8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        function moveTarget() {
+            target.size = Math.random() * 15 + 20;
+            target.x = Math.random() * (canvas.width - target.size * 2) + target.size;
+            target.y = Math.random() * (canvas.height - target.size * 2) + target.size;
+            draw();
+        }
+
+        function handleInput(e) {
+            if (!gameActive) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            const dist = Math.hypot(pos.x - target.x, pos.y - target.y);
+            
+            if (dist < target.size + 15) {
+                score++;
+                scoreEl.textContent = score;
+                moveTarget();
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeEl.textContent = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            finalScoreEl.textContent = score;
+            gameOverEl.style.display = 'block';
+        }
+
+        function restartGame() {
+            score = 0;
+            timeLeft = 30;
+            gameActive = true;
+            scoreEl.textContent = '0';
+            timeEl.textContent = '30';
+            gameOverEl.style.display = 'none';
+            moveTarget();
+            startTimer();
+        }
+
+        // Event listeners
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', handleInput, { passive: false });
+
+        // Responsive
+        function resize() {
+            const maxWidth = Math.min(600, window.innerWidth - 20);
+            canvas.style.width = maxWidth + 'px';
+            canvas.style.height = (maxWidth * 2/3) + 'px';
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Start
+        moveTarget();
+        startTimer();
+    </script>
+</body>
+</html>
